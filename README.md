@@ -109,21 +109,22 @@ Technologies will be added as the projects progress.
 
 ### Completed
 
-* [x] Basic static HTML scraping
-* [x] Pagination
-* [x] Following detail-page links
-* [x] Data cleaning and normalization
-* [x] Error handling
-* [x] CSV export
-* [x] JSON export
+* ✅ Basic static HTML scraping
+* ✅ Pagination
+* ✅ Following detail-page links
+* ✅ Data cleaning and normalization
+* ✅ Error handling
+* ✅ CSV export
+* ✅ JSON export
 
 ### Next Steps
 
-* [ ] More complex static websites
-* [ ] Dynamic JavaScript websites
-* [ ] Browser automation
-* [ ] PostgreSQL integration
-* [ ] Advanced scraping projects
+* ⬜ More complex static websites
+* ⬜ Dynamic JavaScript websites
+* ⬜ Browser automation
+* ⬜ PostgreSQL integration
+* ⬜ Advanced scraping projects
+
 
 
 ## Goal
