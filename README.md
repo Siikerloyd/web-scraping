@@ -107,6 +107,8 @@ Technologies will be added as the projects progress.
 
 ## Current Progress
 
+### Completed
+
 * [x] Basic static HTML scraping
 * [x] Pagination
 * [x] Following detail-page links
@@ -114,11 +116,15 @@ Technologies will be added as the projects progress.
 * [x] Error handling
 * [x] CSV export
 * [x] JSON export
+
+### Next Steps
+
 * [ ] More complex static websites
 * [ ] Dynamic JavaScript websites
 * [ ] Browser automation
 * [ ] PostgreSQL integration
 * [ ] Advanced scraping projects
+
 
 ## Goal
 
