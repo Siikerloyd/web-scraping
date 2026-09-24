@@ -3,6 +3,9 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import json
 import csv
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+import logging
 
 
 def get_text_or_none(soup, selector):
@@ -29,20 +32,41 @@ def get_attr_or_none(soup, selector, attribute):
 
 
 all_quotes = []
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s: %(message)s"
+)
+author_cache = {}
+session = requests.Session()
+retry_strategy = Retry(
+    total=3,
+    backoff_factor=1,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["GET"]
+)
+cache_hits = 0
+cache_misses = 0
 
-for page in range (1, 11):
+adapter = HTTPAdapter(max_retries=retry_strategy)
+
+session.mount("https://", adapter)
+session.mount("http://", adapter)
+
+
+
+for page in range(1, 11):
 
     if page == 1:
         url = "https://quotes.toscrape.com"
     else:
         url = f"https://quotes.toscrape.com/page/{page}"
-
     try:
-        response = requests.get(url, timeout=10)
+        response = session.get(url, timeout=10)
         response.raise_for_status()
+        logging.info(f"Page {page} scraped successfully")
 
     except requests.RequestException as e:
-        print(f"Page {page} request failed: {e}")
+        logging.error(f"Page {page} request failed: {e}")
         continue
 
     soup = BeautifulSoup(response.text, "html.parser")
@@ -69,61 +93,75 @@ for page in range (1, 11):
             )
 
             if not relative_url:
-                print(
-                    f"Quote {quote_index}: "
-                    "Author URL is missing, skipping quote."
-                )
+                logging.warning("Author URL is missing")
                 continue
 
             author_url = urljoin(url, relative_url)
 
             try:
-                author_response = requests.get(
-                    author_url,
-                    timeout=10
-                )
+                if author_url in author_cache:
+                    cache_hits += 1
+                    author_details = author_cache[author_url]
 
-                author_response.raise_for_status()
+                else:
+                    cache_misses += 1
+                    author_response = session.get(
+                        author_url,
+                        timeout=10
+                    )
 
-                author_soup = BeautifulSoup(
-                    author_response.text,
-                    "html.parser"
-                )
+                    author_response.raise_for_status()
 
-                author_born_date = get_text_or_none(
-                    author_soup,
-                    "span.author-born-date"
-                )
+                    author_soup = BeautifulSoup(
+                        author_response.text,
+                        "html.parser"
+                    )
 
-                author_born_location = get_text_or_none(
-                    author_soup,
-                    "span.author-born-location"
-                )
+                    author_born_date = get_text_or_none(
+                        author_soup,
+                        "span.author-born-date"
+                    )
 
-                author_description = get_text_or_none(
-                    author_soup,
-                    ".author-description"
-                )
+                    author_born_location = get_text_or_none(
+                        author_soup,
+                        "span.author-born-location"
+                    )
+
+                    author_description = get_text_or_none(
+                        author_soup,
+                        ".author-description"
+                    )
+
+                    author_details = {
+                        "birth_date": author_born_date,
+                        "birth_location": author_born_location,
+                        "author_description": author_description
+                    }
+
+                    author_cache[author_url] = author_details
 
                 full_quote_details = {
                     "Author_name": author,
                     "quote": text,
                     "tags": tags,
-                    "birth_date": author_born_date,
-                    "birth_location": author_born_location,
-                    "author_description": author_description
+                    "birth_date": author_details["birth_date"],
+                    "birth_location": author_details["birth_location"],
+                    "author_description": author_details["author_description"]
                 }
 
                 all_quotes.append(full_quote_details)
 
             except requests.RequestException as e:
-                print(f"Author request failed: {e}")
+                logging.error(f"Author request failed: {e}")
                 continue
 
         except Exception as e:
-            print(f"Quote {quote_index} failed: {e}")
+            logging.error(f"Quote {quote_index} failed: {e}")
             continue
 
+logging.info(f"Cache hits: {cache_hits}")
+logging.info(f"Cache misses: {cache_misses}")
+logging.info(f"Unique authors: {len(author_cache)}")
 
 with open("quotes.json", "w", encoding="utf-8") as file:
     json.dump(
@@ -156,4 +194,4 @@ if len(all_quotes) > 0:
             writer.writerow(row)
 
 else:
-    print("Failed to scrape any quotes.")
+    logging.error("Failed to scrape any quotes.")
